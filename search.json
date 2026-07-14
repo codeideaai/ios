@@ -1,0 +1,149 @@
+[
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "iOS 开发笔记",
+    "section": "",
+    "text": "这里整理 SwiftUI 布局相关的学习笔记和图解。"
+  },
+  {
+    "objectID": "index.html#swiftui-stack-views-图解",
+    "href": "index.html#swiftui-stack-views-图解",
+    "title": "iOS 开发笔记",
+    "section": "SwiftUI Stack Views 图解",
+    "text": "SwiftUI Stack Views 图解\n用 HStack、VStack、ZStack 拆解复杂界面，并通过 alignment、Spacer、Divider 和 overlay/background 构建自适应布局。"
+  },
+  {
+    "objectID": "index.html#swiftui-lazy-stack-views-图解",
+    "href": "index.html#swiftui-lazy-stack-views-图解",
+    "title": "iOS 开发笔记",
+    "section": "SwiftUI Lazy Stack Views 图解",
+    "text": "SwiftUI Lazy Stack Views 图解\n用 LazyVStack、LazyHStack 和 Section 展示与组织大量数据，并固定滚动区域中的 header 或 footer。"
+  },
+  {
+    "objectID": "swiftui-lazy-stack.html",
+    "href": "swiftui-lazy-stack.html",
+    "title": "SwiftUI Lazy Stack Views 图解",
+    "section": "",
+    "text": "基于 Apple《Grouping data with lazy stack views》：用 LazyVStack / LazyHStack 展示大量数据，把数据组织成 Section，并在滚动时固定重要的 header 或 footer。"
+  },
+  {
+    "objectID": "swiftui-lazy-stack.html#lazy-stack-的核心需要显示时才创建",
+    "href": "swiftui-lazy-stack.html#lazy-stack-的核心需要显示时才创建",
+    "title": "SwiftUI Lazy Stack Views 图解",
+    "section": "Lazy Stack 的核心：需要显示时才创建",
+    "text": "Lazy Stack 的核心：需要显示时才创建\nLazyVStack 和 LazyHStack 会按方向排列子视图，但它们是 lazy 的：视图不需要出现在屏幕上时，SwiftUI 不急着创建和渲染它们。\n这很适合长内容流，比如很多行、很多卡片、很多自定义分组。它和普通 Stack 的区别不是外观，而是创建子视图的时机。\n\n\n屏幕外 正在显示 接近显示\n\n\nLazyVStack 在 ScrollView 中工作\n\n\n\n\n\n\n\nRow 01\n\n\nRow 02\n\n\nRow 03\n\n\nRow 04\n\n\nRow 05\n\n\nRow 06\n\n\nRow 07\n\n\nRow 08\n\n\nRow 09\n\n\nRow 10\n\n\nRow 11"
+  },
+  {
+    "objectID": "swiftui-lazy-stack.html#lazy-stack-本身不滚动",
+    "href": "swiftui-lazy-stack.html#lazy-stack-本身不滚动",
+    "title": "SwiftUI Lazy Stack Views 图解",
+    "section": "Lazy Stack 本身不滚动",
+    "text": "Lazy Stack 本身不滚动\nApple 特别提醒：lazy stack 和普通 stack 一样，本身没有内建滚动能力。要滚动，外面需要包一层 ScrollView。\n所以 LazyVStack 解决的是“如何按需创建和排列子视图”，ScrollView 解决的是“如何滚动”。\nScrollView {\n    LazyVStack(spacing: 1) {\n        ForEach(sections) { section in\n            Section(header: SectionHeaderView(colorData: section)) {\n                ForEach(section.variations) { variation in\n                    section.color\n                        .brightness(variation.brightness)\n                        .frame(height: 20)\n                }\n            }\n        }\n    }\n}"
+  },
+  {
+    "objectID": "swiftui-lazy-stack.html#先准备可识别的数据",
+    "href": "swiftui-lazy-stack.html#先准备可识别的数据",
+    "title": "SwiftUI Lazy Stack Views 图解",
+    "section": "先准备可识别的数据",
+    "text": "先准备可识别的数据\n文章示例把数据分成两层：外层 ColorData 表示一个颜色分组，内层 ShadeData 表示这个颜色的不同亮度。因为要用 ForEach 遍历，它们都需要能唯一识别。\n这就是 Identifiable 的作用：告诉 SwiftUI 每个分组和每个 shade 是谁，方便更新、复用和差异计算。\n\n\nColorData: Reds\nidnamecolorvariations\n\n\n↓ contains\n\n\nShadeData[]\n0.00.10.20.30.4\n\n\nstruct ColorData: Identifiable {\n    let id = UUID()\n    let name: String\n    let color: Color\n    let variations: [ShadeData]\n\n    struct ShadeData: Identifiable {\n        let id = UUID()\n        var brightness: Double\n    }\n}"
+  },
+  {
+    "objectID": "swiftui-lazy-stack.html#section-负责表达逻辑分组",
+    "href": "swiftui-lazy-stack.html#section-负责表达逻辑分组",
+    "title": "SwiftUI Lazy Stack Views 图解",
+    "section": "Section 负责表达“逻辑分组”",
+    "text": "Section 负责表达“逻辑分组”\nSection 本身不一定有可见外观。它更像是语义容器：这一组内容属于 Reds，那一组属于 Greens。你可以给它 header 或 footer，让分组边界变得可见。\n在这篇文章中，一个颜色就是一个 section，里面的五个条带是这个颜色的变体。\n\n三个 Section，每个 Section 有 header 和内容\n\n\n\nRedsGreensBlues\n\n\n\n\nForEach(sections) { section in\n    Section(header: SectionHeaderView(colorData: section)) {\n        ForEach(section.variations) { variation in\n            section.color\n                .brightness(variation.brightness)\n                .frame(height: 20)\n        }\n    }\n}"
+  },
+  {
+    "objectID": "swiftui-lazy-stack.html#header-是普通-view可以自己组合",
+    "href": "swiftui-lazy-stack.html#header-是普通-view可以自己组合",
+    "title": "SwiftUI Lazy Stack Views 图解",
+    "section": "Header 是普通 View，可以自己组合",
+    "text": "Header 是普通 View，可以自己组合\n文章中的 header 用 HStack 做了一行：左侧是 section 名称，右侧用 Spacer() 撑开。背景用了半透明色，让它既像分组标题，又不抢内容主体。\nstruct SectionHeaderView: View {\n    var colorData: ColorData\n\n    var body: some View {\n        HStack {\n            Text(colorData.name)\n                .font(.headline)\n                .foregroundColor(colorData.color)\n            Spacer()\n        }\n        .padding()\n        .background(Color.primary\n            .colorInvert()\n            .opacity(0.75))\n    }\n}"
+  },
+  {
+    "objectID": "swiftui-lazy-stack.html#pinnedviews让重要信息停在边缘",
+    "href": "swiftui-lazy-stack.html#pinnedviews让重要信息停在边缘",
+    "title": "SwiftUI Lazy Stack Views 图解",
+    "section": "pinnedViews：让重要信息停在边缘",
+    "text": "pinnedViews：让重要信息停在边缘\n默认情况下，section header 和内容一起滚走。加入 pinnedViews: [.sectionHeaders] 后，header 会在滚动时固定在可见区域边缘，让用户始终知道当前看到的是哪一组。\n在 LazyVStack 中，header 固定在顶部，footer 固定在底部。在 LazyHStack 中，header 固定在 leading 边，footer 固定在 trailing 边。\n\n滚动后，Greens header 固定在顶部\n\nGreens\n\n\n\n\n\nLazyVStack(\n    spacing: 1,\n    pinnedViews: [.sectionHeaders]\n) {\n    // Section(...)\n}"
+  },
+  {
+    "objectID": "swiftui-lazy-stack.html#纵向和横向的固定边缘不同",
+    "href": "swiftui-lazy-stack.html#纵向和横向的固定边缘不同",
+    "title": "SwiftUI Lazy Stack Views 图解",
+    "section": "纵向和横向的固定边缘不同",
+    "text": "纵向和横向的固定边缘不同\n同样是 Section，在不同方向的 lazy stack 里，header/footer 会贴到不同边缘。这一点很容易被忽略。\n\n\nLazyVStack\n\nheader pinned to topcontent scrolls verticallyfooter pinned to bottom\n\n\n\nLazyHStack\n\nheader leadingcontent scrolls horizontallyfooter trailing"
+  },
+  {
+    "objectID": "swiftui-lazy-stack.html#什么时候选-lazy-stack",
+    "href": "swiftui-lazy-stack.html#什么时候选-lazy-stack",
+    "title": "SwiftUI Lazy Stack Views 图解",
+    "section": "什么时候选 Lazy Stack",
+    "text": "什么时候选 Lazy Stack\n这篇文章的定位不是说 Lazy Stack 替代所有容器，而是说：当你需要一个高度自定义的、可滚动的一维内容流，并且内容可以按逻辑分组时，Lazy Stack 很合适。\n\n\nLazy Stack\n自定义滚动内容、分组展示、header/footer 可固定。\n\n\nList\n标准系统列表、删除、移动、选择、平台列表样式。\n\n\nLazy Grid\n二维内容，比如照片墙、商品卡片、图标墙。"
+  },
+  {
+    "objectID": "swiftui-lazy-stack.html#一句话总结",
+    "href": "swiftui-lazy-stack.html#一句话总结",
+    "title": "SwiftUI Lazy Stack Views 图解",
+    "section": "一句话总结",
+    "text": "一句话总结\nLazyVStack / LazyHStack 负责按需创建大量一维内容，ScrollView 负责滚动，Section 负责逻辑分组，pinnedViews 负责把 header/footer 固定在滚动边缘。\n来源：Apple Developer Documentation, “Grouping data with lazy stack views”。"
+  },
+  {
+    "objectID": "swiftui-stack.html",
+    "href": "swiftui-stack.html",
+    "title": "SwiftUI Stack Views 图解",
+    "section": "",
+    "text": "基于 Apple《Building layouts with stack views》：用 HStack、VStack、ZStack 拆解复杂界面，并通过 alignment、Spacer、Divider、overlay/background 做出可适配布局。"
+  },
+  {
+    "objectID": "swiftui-stack.html#三种-stack-的基本方向",
+    "href": "swiftui-stack.html#三种-stack-的基本方向",
+    "title": "SwiftUI Stack Views 图解",
+    "section": "三种 Stack 的基本方向",
+    "text": "三种 Stack 的基本方向\nStack 的本质是把子视图放进一个简单的布局规则里：水平、垂直、或深度叠放。默认情况下，Stack 会居中对齐子视图，并在子视图之间加入少量间距。\n\n\nHStack：横向排列\n\nAB\n\n\n\nVStack：纵向排列\n\nAB\n\n\n\nZStack：前后叠放\n\nAB"
+  },
+  {
+    "objectID": "swiftui-stack.html#先规划布局层级",
+    "href": "swiftui-stack.html#先规划布局层级",
+    "title": "SwiftUI Stack Views 图解",
+    "section": "先规划布局层级",
+    "text": "先规划布局层级\n不要把复杂 UI 当成一个大布局来写，而是把它拆成小块。资料卡片可以拆成一个底层图片、一个底部覆盖栏，覆盖栏内部再进行横向和纵向组合。\n\n\n\nZStack：图片和底部信息栏叠放\n\n\nImage：作为主体内容\n\n\nHStack：底部信息栏横向展开\n\n\nVStack + Spacer：文字上下排列，Spacer 推开剩余空间\n\n\n\n\nRachael ChiseckChief Executive Officer"
+  },
+  {
+    "objectID": "swiftui-stack.html#alignment-控制的是-stack-内部",
+    "href": "swiftui-stack.html#alignment-控制的是-stack-内部",
+    "title": "SwiftUI Stack Views 图解",
+    "section": "alignment 控制的是 Stack 内部",
+    "text": "alignment 控制的是 Stack 内部\nVStack(alignment: .leading) 不是把整个 VStack 放到父容器左侧，而是让 VStack 里面的子视图沿水平方向左对齐。\n对应地，HStack 的 alignment 控制子视图的垂直对齐；ZStack 的 alignment 可以同时表达水平和垂直方向。\nVStack(alignment: .leading) {\n    Text(\"Rachael Chiseck\")\n    Text(\"Chief Executive Officer\")\n}\n\n\nleading\n\n\n\n\n\ncenter\n\n\n\n\n\ntrailing"
+  },
+  {
+    "objectID": "swiftui-stack.html#spacer-沿主轴占用剩余空间",
+    "href": "swiftui-stack.html#spacer-沿主轴占用剩余空间",
+    "title": "SwiftUI Stack Views 图解",
+    "section": "Spacer 沿主轴占用剩余空间",
+    "text": "Spacer 沿主轴占用剩余空间\n在 HStack 里，Spacer 沿水平方向扩张，把左右内容推开。在 VStack 里，它沿垂直方向扩张，把上下内容推开。\n\nLeftRight\n\nHStack {\n    Text(\"Left\")\n    Spacer()\n    Text(\"Right\")\n}"
+  },
+  {
+    "objectID": "swiftui-stack.html#divider-是线不是弹性空间",
+    "href": "swiftui-stack.html#divider-是线不是弹性空间",
+    "title": "SwiftUI Stack Views 图解",
+    "section": "Divider 是线，不是弹性空间",
+    "text": "Divider 是线，不是弹性空间\nDivider 会在 Stack 的子视图之间插入一条分隔线。它只需要足够空间来画线，不会像 Spacer 一样吞掉剩余空间。\n\nAB\n\nHStack {\n    Text(\"A\")\n    Divider()\n    Text(\"B\")\n}"
+  },
+  {
+    "objectID": "swiftui-stack.html#优先做自适应布局而不是写死位置",
+    "href": "swiftui-stack.html#优先做自适应布局而不是写死位置",
+    "title": "SwiftUI Stack Views 图解",
+    "section": "优先做自适应布局，而不是写死位置",
+    "text": "优先做自适应布局，而不是写死位置\nApple 文档强调：尽量描述结构和层级，让视图自然适配不同设备。写死宽高和坐标短期看起来能对齐，但在小屏、大字体、横竖屏或不同平台上更容易坏。\n\n\n写死尺寸：容易溢出\n\n\n\n固定宽度 210，放进窄屏后超出边界\n\n\n\n\n\n自适应结构：跟随容器\n\n\n\n使用 Stack、padding、Spacer，让内容适配可用空间"
+  },
+  {
+    "objectID": "swiftui-stack.html#zstack-与-overlaybackground-的取舍",
+    "href": "swiftui-stack.html#zstack-与-overlaybackground-的取舍",
+    "title": "SwiftUI Stack Views 图解",
+    "section": "ZStack 与 overlay/background 的取舍",
+    "text": "ZStack 与 overlay/background 的取舍\n如果有一个主视图决定最终大小，附加内容只是贴在它上面，用 overlay 或 background 更自然。如果多个叠放视图共同决定整体大小，用 ZStack 更合适。\n\n\noverlay：图片决定尺寸，文字附着在底部\n\nProfileDetail overlay\n\n\n\nZStack：多个视图共同组成整体\n\nView AView B\n\n\n\nImage(\"ProfilePicture\")\n    .resizable()\n    .aspectRatio(contentMode: .fit)\n    .overlay(ProfileDetail(), alignment: .bottom)"
+  }
+]
