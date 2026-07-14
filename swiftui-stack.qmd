@@ -1,0 +1,148 @@
+---
+title: "SwiftUI Stack Views 图解"
+description: "用 HStack、VStack、ZStack 拆解复杂界面，并构建可适配布局。"
+toc: true
+---
+
+基于 Apple《Building layouts with stack views》：用 `HStack`、`VStack`、`ZStack` 拆解复杂界面，并通过 alignment、Spacer、Divider、overlay/background 做出可适配布局。
+
+## 三种 Stack 的基本方向
+
+Stack 的本质是把子视图放进一个简单的布局规则里：水平、垂直、或深度叠放。默认情况下，Stack 会居中对齐子视图，并在子视图之间加入少量间距。
+
+:::: {.stack-grid}
+::: {.demo-card}
+**HStack：横向排列**
+
+<div class="stack-stage hstack-demo"><span class="square">A</span><span class="circle">B</span></div>
+:::
+
+::: {.demo-card}
+**VStack：纵向排列**
+
+<div class="stack-stage vstack-demo"><span class="square">A</span><span class="circle">B</span></div>
+:::
+
+::: {.demo-card}
+**ZStack：前后叠放**
+
+<div class="stack-stage zstack-demo"><span class="square">A</span><span class="circle">B</span></div>
+:::
+::::
+
+## 先规划布局层级
+
+不要把复杂 UI 当成一个大布局来写，而是把它拆成小块。资料卡片可以拆成一个底层图片、一个底部覆盖栏，覆盖栏内部再进行横向和纵向组合。
+
+:::: {.layout-grid}
+::: {.hierarchy}
+<div><strong>ZStack</strong>：图片和底部信息栏叠放</div>
+<div><strong>Image</strong>：作为主体内容</div>
+<div><strong>HStack</strong>：底部信息栏横向展开</div>
+<div><strong>VStack + Spacer</strong>：文字上下排列，Spacer 推开剩余空间</div>
+:::
+
+::: {.profile-demo}
+<div class="profile-caption"><span><strong>Rachael Chiseck</strong><small>Chief Executive Officer</small></span></div>
+:::
+::::
+
+## alignment 控制的是 Stack 内部
+
+`VStack(alignment: .leading)` 不是把整个 VStack 放到父容器左侧，而是让 VStack 里面的子视图沿水平方向左对齐。
+
+对应地，HStack 的 alignment 控制子视图的垂直对齐；ZStack 的 alignment 可以同时表达水平和垂直方向。
+
+```swift
+VStack(alignment: .leading) {
+    Text("Rachael Chiseck")
+    Text("Chief Executive Officer")
+}
+```
+
+:::: {.alignment-grid}
+::: {.alignment-card}
+**leading**
+
+<div class="alignment-lines leading"><i></i><i></i></div>
+:::
+::: {.alignment-card}
+**center**
+
+<div class="alignment-lines center"><i></i><i></i></div>
+:::
+::: {.alignment-card}
+**trailing**
+
+<div class="alignment-lines trailing"><i></i><i></i></div>
+:::
+::::
+
+## Spacer 沿主轴占用剩余空间
+
+在 HStack 里，Spacer 沿水平方向扩张，把左右内容推开。在 VStack 里，它沿垂直方向扩张，把上下内容推开。
+
+<div class="spacer-demo"><span>Left</span><i></i><span>Right</span></div>
+
+```swift
+HStack {
+    Text("Left")
+    Spacer()
+    Text("Right")
+}
+```
+
+## Divider 是线，不是弹性空间
+
+Divider 会在 Stack 的子视图之间插入一条分隔线。它只需要足够空间来画线，不会像 Spacer 一样吞掉剩余空间。
+
+<div class="divider-demo"><span>A</span><i></i><span>B</span></div>
+
+```swift
+HStack {
+    Text("A")
+    Divider()
+    Text("B")
+}
+```
+
+## 优先做自适应布局，而不是写死位置
+
+Apple 文档强调：尽量描述结构和层级，让视图自然适配不同设备。写死宽高和坐标短期看起来能对齐，但在小屏、大字体、横竖屏或不同平台上更容易坏。
+
+:::: {.comparison-grid}
+::: {.phone-example}
+**写死尺寸：容易溢出**
+
+<div class="phone"><div class="screen"><div class="fixed-card">固定宽度 210，放进窄屏后超出边界</div></div></div>
+:::
+::: {.phone-example}
+**自适应结构：跟随容器**
+
+<div class="phone"><div class="screen"><div class="adaptive-card">使用 Stack、padding、Spacer，让内容适配可用空间</div></div></div>
+:::
+::::
+
+## ZStack 与 overlay/background 的取舍
+
+如果有一个主视图决定最终大小，附加内容只是贴在它上面，用 overlay 或 background 更自然。如果多个叠放视图共同决定整体大小，用 ZStack 更合适。
+
+:::: {.comparison-grid}
+::: {.overlay-example}
+**overlay：图片决定尺寸，文字附着在底部**
+
+<div class="overlay-scene"><span>ProfileDetail overlay</span></div>
+:::
+::: {.zstack-example}
+**ZStack：多个视图共同组成整体**
+
+<div class="z-scene"><span>View A</span><span>View B</span></div>
+:::
+::::
+
+```swift
+Image("ProfilePicture")
+    .resizable()
+    .aspectRatio(contentMode: .fit)
+    .overlay(ProfileDetail(), alignment: .bottom)
+```

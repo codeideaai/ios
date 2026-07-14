@@ -1,0 +1,27 @@
+project:
+  type: website
+  output-dir: _site
+
+website:
+  title: "iOS 开发笔记"
+  navbar:
+    left:
+      - href: index.qmd
+        text: 首页
+      - href: swiftui-stack.qmd
+        text: SwiftUI Stack Views
+      - href: swiftui-lazy-stack.qmd
+        text: SwiftUI Lazy Stack Views
+  page-footer:
+    center: "Built with Quarto"
+
+lang: zh-CN
+
+format:
+  html:
+    theme: cosmo
+    css: styles.css
+    toc: true
+    toc-title: "目录"
+    code-copy: true
+    smooth-scroll: true

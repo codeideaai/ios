@@ -1,0 +1,22 @@
+---
+title: "iOS 开发笔记"
+description: "SwiftUI 布局与开发笔记"
+toc: false
+page-layout: full
+---
+
+这里整理 SwiftUI 布局相关的学习笔记和图解。
+
+:::: {.article-list}
+::: {.article-card}
+## [SwiftUI Stack Views 图解](swiftui-stack.qmd)
+
+用 `HStack`、`VStack`、`ZStack` 拆解复杂界面，并通过 alignment、Spacer、Divider 和 overlay/background 构建自适应布局。
+:::
+
+::: {.article-card}
+## [SwiftUI Lazy Stack Views 图解](swiftui-lazy-stack.qmd)
+
+用 `LazyVStack`、`LazyHStack` 和 `Section` 展示与组织大量数据，并固定滚动区域中的 header 或 footer。
+:::
+::::

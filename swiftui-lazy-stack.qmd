@@ -1,0 +1,198 @@
+---
+title: "SwiftUI Lazy Stack Views 图解"
+description: "用 LazyVStack、LazyHStack 和 Section 展示、组织大量数据。"
+toc: true
+---
+
+基于 Apple《Grouping data with lazy stack views》：用 `LazyVStack` / `LazyHStack` 展示大量数据，把数据组织成 `Section`，并在滚动时固定重要的 header 或 footer。
+
+## Lazy Stack 的核心：需要显示时才创建
+
+`LazyVStack` 和 `LazyHStack` 会按方向排列子视图，但它们是 lazy 的：视图不需要出现在屏幕上时，SwiftUI 不急着创建和渲染它们。
+
+这很适合长内容流，比如很多行、很多卡片、很多自定义分组。它和普通 Stack 的区别不是外观，而是创建子视图的时机。
+
+:::: {.lazy-layout-grid}
+::: {.lazy-legend}
+<span><i class="lazy-swatch offscreen"></i>屏幕外</span>
+<span><i class="lazy-swatch visible"></i>正在显示</span>
+<span><i class="lazy-swatch nearby"></i>接近显示</span>
+:::
+
+::: {.lazy-stage}
+**LazyVStack 在 ScrollView 中工作**
+
+<div class="lazy-phone"><div class="lazy-screen"><div class="lazy-viewport"></div><div class="lazy-list"><div class="lazy-row offscreen">Row 01</div><div class="lazy-row offscreen">Row 02</div><div class="lazy-row nearby">Row 03</div><div class="lazy-row visible">Row 04</div><div class="lazy-row visible">Row 05</div><div class="lazy-row visible">Row 06</div><div class="lazy-row visible">Row 07</div><div class="lazy-row visible">Row 08</div><div class="lazy-row nearby">Row 09</div><div class="lazy-row offscreen">Row 10</div><div class="lazy-row offscreen">Row 11</div></div></div></div>
+:::
+::::
+
+## Lazy Stack 本身不滚动
+
+Apple 特别提醒：lazy stack 和普通 stack 一样，本身没有内建滚动能力。要滚动，外面需要包一层 `ScrollView`。
+
+所以 `LazyVStack` 解决的是“如何按需创建和排列子视图”，`ScrollView` 解决的是“如何滚动”。
+
+```swift
+ScrollView {
+    LazyVStack(spacing: 1) {
+        ForEach(sections) { section in
+            Section(header: SectionHeaderView(colorData: section)) {
+                ForEach(section.variations) { variation in
+                    section.color
+                        .brightness(variation.brightness)
+                        .frame(height: 20)
+                }
+            }
+        }
+    }
+}
+```
+
+## 先准备可识别的数据
+
+文章示例把数据分成两层：外层 `ColorData` 表示一个颜色分组，内层 `ShadeData` 表示这个颜色的不同亮度。因为要用 `ForEach` 遍历，它们都需要能唯一识别。
+
+这就是 `Identifiable` 的作用：告诉 SwiftUI 每个分组和每个 shade 是谁，方便更新、复用和差异计算。
+
+:::: {.lazy-data-model}
+::: {.lazy-model-card}
+**ColorData: Reds**
+
+<span>id</span><span>name</span><span>color</span><span>variations</span>
+:::
+
+<div class="lazy-arrow">↓ contains</div>
+
+::: {.lazy-model-card}
+**ShadeData[]**
+
+<span>0.0</span><span>0.1</span><span>0.2</span><span>0.3</span><span>0.4</span>
+:::
+::::
+
+```swift
+struct ColorData: Identifiable {
+    let id = UUID()
+    let name: String
+    let color: Color
+    let variations: [ShadeData]
+
+    struct ShadeData: Identifiable {
+        let id = UUID()
+        var brightness: Double
+    }
+}
+```
+
+## Section 负责表达“逻辑分组”
+
+`Section` 本身不一定有可见外观。它更像是语义容器：这一组内容属于 Reds，那一组属于 Greens。你可以给它 header 或 footer，让分组边界变得可见。
+
+在这篇文章中，一个颜色就是一个 section，里面的五个条带是这个颜色的变体。
+
+::: {.lazy-stage}
+**三个 Section，每个 Section 有 header 和内容**
+
+<div class="lazy-phone sections"><div class="lazy-screen"><div class="lazy-section-list"><strong class="red-text">Reds</strong><i class="red-0"></i><i class="red-1"></i><i class="red-2"></i><i class="red-3"></i><i class="red-4"></i><strong class="green-text">Greens</strong><i class="green-0"></i><i class="green-1"></i><i class="green-2"></i><i class="green-3"></i><i class="green-4"></i><strong class="blue-text">Blues</strong><i class="blue-0"></i><i class="blue-1"></i><i class="blue-2"></i><i class="blue-3"></i><i class="blue-4"></i></div></div></div>
+:::
+
+```swift
+ForEach(sections) { section in
+    Section(header: SectionHeaderView(colorData: section)) {
+        ForEach(section.variations) { variation in
+            section.color
+                .brightness(variation.brightness)
+                .frame(height: 20)
+        }
+    }
+}
+```
+
+## Header 是普通 View，可以自己组合
+
+文章中的 header 用 `HStack` 做了一行：左侧是 section 名称，右侧用 `Spacer()` 撑开。背景用了半透明色，让它既像分组标题，又不抢内容主体。
+
+```swift
+struct SectionHeaderView: View {
+    var colorData: ColorData
+
+    var body: some View {
+        HStack {
+            Text(colorData.name)
+                .font(.headline)
+                .foregroundColor(colorData.color)
+            Spacer()
+        }
+        .padding()
+        .background(Color.primary
+            .colorInvert()
+            .opacity(0.75))
+    }
+}
+```
+
+## pinnedViews：让重要信息停在边缘
+
+默认情况下，section header 和内容一起滚走。加入 `pinnedViews: [.sectionHeaders]` 后，header 会在滚动时固定在可见区域边缘，让用户始终知道当前看到的是哪一组。
+
+在 `LazyVStack` 中，header 固定在顶部，footer 固定在底部。在 `LazyHStack` 中，header 固定在 leading 边，footer 固定在 trailing 边。
+
+::: {.lazy-stage}
+**滚动后，Greens header 固定在顶部**
+
+<div class="lazy-pin-demo"><strong>Greens</strong><div><i class="red-3"></i><i class="red-4"></i><i class="green-0"></i><i class="green-1"></i><i class="green-2"></i><i class="green-3"></i><i class="green-4"></i><i class="blue-0"></i><i class="blue-1"></i><i class="blue-2"></i><i class="blue-3"></i><i class="blue-4"></i></div></div>
+:::
+
+```swift
+LazyVStack(
+    spacing: 1,
+    pinnedViews: [.sectionHeaders]
+) {
+    // Section(...)
+}
+```
+
+## 纵向和横向的固定边缘不同
+
+同样是 Section，在不同方向的 lazy stack 里，header/footer 会贴到不同边缘。这一点很容易被忽略。
+
+:::: {.lazy-comparison-grid}
+::: {.lazy-axis-card}
+**LazyVStack**
+
+<div class="lazy-axis vertical"><span>header pinned to top</span><span>content scrolls vertically</span><span>footer pinned to bottom</span></div>
+:::
+::: {.lazy-axis-card}
+**LazyHStack**
+
+<div class="lazy-axis horizontal"><span>header leading</span><span>content scrolls horizontally</span><span>footer trailing</span></div>
+:::
+::::
+
+## 什么时候选 Lazy Stack
+
+这篇文章的定位不是说 Lazy Stack 替代所有容器，而是说：当你需要一个高度自定义的、可滚动的一维内容流，并且内容可以按逻辑分组时，Lazy Stack 很合适。
+
+:::: {.lazy-decision-grid}
+::: {.lazy-choice}
+**Lazy Stack**
+
+自定义滚动内容、分组展示、header/footer 可固定。
+:::
+::: {.lazy-choice}
+**List**
+
+标准系统列表、删除、移动、选择、平台列表样式。
+:::
+::: {.lazy-choice}
+**Lazy Grid**
+
+二维内容，比如照片墙、商品卡片、图标墙。
+:::
+::::
+
+## 一句话总结
+
+`LazyVStack` / `LazyHStack` 负责按需创建大量一维内容，`ScrollView` 负责滚动，`Section` 负责逻辑分组，`pinnedViews` 负责把 header/footer 固定在滚动边缘。
+
+来源：Apple Developer Documentation, “Grouping data with lazy stack views”。
